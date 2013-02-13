@@ -1,0 +1,25 @@
+import "common.proto";
+package org.zyni.message;
+
+message State {
+    required Address address = 1;
+    required uint32 generation = 2;
+    required uint32 max_version = 3;
+    repeated VersionedValue extra = 4;
+}
+
+message Ping {
+    repeated State digest = 1;
+}
+
+message PingAck {
+    repeated State request = 1;
+    repeated State response = 2;
+}
+
+message PingEnd {
+    repeated State digest = 1;
+}
+
+message Exit {
+}

@@ -1,0 +1,63 @@
+
+<class name = "gossip_msg" signature = "gossip" package="org.jeromq.jini.heartbeat" >
+This is the Jini Gossip protocol raw version.
+<include filename = "license.xml" />
+
+<!-- Header for all messages -->
+<header>
+</header>
+
+<message name = "HELLO" id = "1">
+    <field name = "ipaddress" type = "string" />
+    <field name = "mailbox" type = "number" size = "2" />
+    <field name = "groups" type = "strings" />
+    <field name = "status" type = "number" size = "1" />
+    <field name = "headers" type = "vdictionary" />
+Greet a peer so it can connect back to us
+</message>
+
+<message name = "WHISPER" id = "2">
+    <field name = "content" type = "frame" />
+Send a message to a peer
+</message>
+
+<message name = "SHOUT" id = "3">
+    <field name = "group" type = "string" />
+    <field name = "content" type = "frame" />
+Send a message to a group
+</message>
+
+<message name = "JOIN" id = "4">
+    <field name = "group" type = "string" />
+    <field name = "status" type = "number" size = "1" />
+Join a group
+</message>
+
+<message name = "STATE" id = "5">
+    <field name = "address" type = "address" />
+    <field name = "generation" type = "number" size = "4" />
+    <field name = "max-version" type = "number" size = "4" />
+    <field name = "extra" type = "vdictionary" />
+</message>
+
+<message name = "PING" id = "8">
+    <field name = "digest" type = "messages" kind = "STATE" />
+Ping a peer that has gone silent
+</message>
+
+<message name = "PING-OK" id = "9">
+    <field name = "request" type = "messages" kind = "STATE" />
+    <field name = "response" type = "messages" kind = "STATE" />
+Reply to a peer's ping
+</message>
+
+<message name = "PING-END" id = "10">
+    <field name = "digest" type = "messages" kind = "STATE" />
+Reply to a peer's ping
+</message>
+
+<message name = "EXIT" id = "11">
+Notifiy a self exit
+</message>
+
+</class>
