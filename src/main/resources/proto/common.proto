@@ -1,0 +1,18 @@
+package org.zyni.message;
+
+message Header {
+    required sint32 signature = 1;
+    required sint32 type = 2;
+}
+
+message Address {
+    required bytes addr = 1;
+    required uint32 port = 2;
+}
+
+
+message VersionedValue {
+    required uint32 version = 1;
+    required string key = 2;
+    required string value = 3;
+}

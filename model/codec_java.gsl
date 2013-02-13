@@ -1,0 +1,979 @@
+.#  codec_java.gsl
+.#
+.#  Generates a codec for a protocol specification
+.#
+.include "library.gsl"
+.resolve_includes ()
+.echo "Generating ../src/main/java/$(string.replace (class.package, '.|/'))/$(class.name:pascal).java..."
+.output "../src/main/java/$(string.replace (class.package, '.|/'))/$(class.name:pascal).java"
+/*  =========================================================================
+    $(class.name:pascal).java
+    
+    Generated codec class for $(class.name:pascal)
+    -------------------------------------------------------------------------
+    $(string.trim (class->license.):block                                   )
+    =========================================================================
+*/
+
+/*  These are the $(class.name) messages
+.for message
+.   message.name = "$(message.name:c)"
+.   for field where item() = 1
+.       for class.header
+.           for field as hfield
+.              copy hfield before field
+.           endfor
+.       endfor
+.   else
+.       for class.header
+.           for field as hfield
+.              copy hfield to message
+.           endfor
+.       endfor
+.   endfor
+.
+    $(NAME) - $(string.trim (.?''):left)
+.   for field
+.       if type = "number"
+.           size ?= 8
+.           signed ?= 1
+.               if signed
+        $(name)       $(type) $(size)
+.               else
+        $(name)       $(type) $(size) unsigned
+.               endif
+.           if size = 1
+.               field.ctype = "int"
+.           elsif size = 2
+.               field.ctype = "int"
+.           elsif size = 4
+.               if signed
+.                   field.ctype = "int"
+.               else
+.                   field.ctype = "long"
+.               endif
+.           elsif size = 8
+.               field.ctype = "long"
+.           else
+.               echo "E: bad size $(size) for $(name)"
+.           endif
+.       elsif type = "octets"
+        $(name)       $(type) [$(size)]
+.       elsif type = "address"
+        $(name)       address:port
+.       elsif type = "messages"
+        $(name)       [$(kind:pascal), ...]
+.       else
+        $(name)       $(type)
+.       endif
+.       field.name = "$(field.name:c)"
+.   endfor
+.endfor
+*/
+
+package $(class.package);
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import org.jeromq.ZFrame;
+import org.jeromq.ZMQ.Socket;
+import org.jeromq.ZMsg;
+import org.jeromq.jini.JiniMsg;
+import org.jeromq.jini.JiniMsg.VersionedMap;
+import org.jeromq.jini.JiniMsg.VersionedValue;
+
+//  Opaque class structure
+public class $(class.name:pascal)
+{
+    public static final int $(CLASS.NAME)_SIGNATURE = "$(class.signature)".hashCode ();
+    static {
+        JiniMsg.registerBuilder ($(CLASS.NAME)_SIGNATURE, new $(class.name:pascal)Builder ());
+    }
+.for define
+    public static final int $(CLASS.NAME)_$(DEFINE.NAME:C)  = $(value);
+.endfor
+
+.for message
+    public static final int $(MESSAGE.NAME)       = $(id);
+.endfor
+.for class.field where type = "octets"
+    public static final int $(FIELD.NAME)_SIZE    = $(size);
+.endfor
+
+.for message
+    public static class $(message.name:pascal) extends JiniMsg
+    {
+.   for field
+.       if type = "number"
+        private $(ctype) $(name);
+.       elsif type = "octets"
+        private byte [] $(name) = new byte [$(size)];
+.       elsif type = "string"
+        private String $(name);
+.       elsif type = "strings"
+        private List <String> $(name);
+.       elsif type = "dictionary"
+        private Map <String, String> $(name);
+.       elsif type = "vdictionary"
+        private VersionedMap $(name);
+.       elsif type = "address"
+        private InetAddress $(name);
+        private int $(name)Port;
+.       elsif type = "messages"
+        private List <$(kind:pascal)> $(name);
+.       elsif type = "frame"
+        private ZFrame $(name);
+.       endif
+.   endfor
+
+        public $(message.name:pascal) ()
+        {
+            super ($(MESSAGE.NAME), $(CLASS.NAME)_SIGNATURE);
+        }
+
+        public $(message.name:pascal) (JiniMsg parent)
+        {
+            super (parent);
+        }
+
+.if count (field) > 0
+        public $(message.name:pascal) (
+.   for field
+.       if type = "number"
+            $(ctype) $(name)\
+.       elsif type = "octets"
+            byte [] $(name)\
+.       elsif type = "string"
+            String $(name)\
+.       elsif type = "strings"
+            Collection <String> $(name)\
+.       elsif type = "dictionary"
+            Map <String, String> $(name)\
+.       elsif type = "vdictionary"
+            VersionedMap $(name)\
+.       elsif type = "address"
+            String $(name)\
+.       elsif type = "messages"
+            Collection <$(kind:pascal)> $(name)\
+.       elsif type = "frame"
+            ZFrame $(name)\
+.       endif
+$(last ()??")" ?",")
+.   endfor
+        {
+            this ();
+.   for field
+.       if type = "frame"
+            this.set$(name:pascal) ($(name).duplicate ());
+.       else
+            this.set$(name:pascal) ($(name));
+.       endif
+.   endfor
+        }
+.endif
+
+        public void destroy ()
+        {
+            super.destroy ();
+        }
+
+.   for field where !defined (value)
+.       if type = "number"
+        //  --------------------------------------------------------------------------
+        //  Get/set the $(name) field
+
+        public $(ctype) get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public void set$(name:pascal) ($(ctype) $(name))
+        {
+            this.$(name) = $(name);
+        }
+.       elsif type = "octets"
+        //  --------------------------------------------------------------------------
+        //  Get/set the $(name) field
+
+        public byte [] get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public void set$(name:pascal) (byte [] $(name))
+        {
+            System.arraycopy ($(name), 0, this.$(name), 0, $(size));
+        }
+.       elsif type = "string"
+        //  --------------------------------------------------------------------------
+        //  Get/set the $(name) field
+
+        public String get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public void set$(name:pascal) (String format, Object ... args)
+        {
+            //  Format into newly allocated string
+            $(name) = String.format (format, args);
+        }
+.       elsif type = "strings"
+        //  --------------------------------------------------------------------------
+        //  Iterate through the $(name) field, and append a $(name) value
+
+        public List <String> get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public void append$(name:pascal) (String format, Object ... args)
+        {
+            //  Format into newly allocated string
+            
+            String string = String.format (format, args);
+            //  Attach string to list
+            if ($(name) == null)
+                $(name) = new ArrayList <String> ();
+            $(name).add (string);
+        }
+
+        public void set$(name:pascal) (Collection <String> value)
+        {
+            $(name) = new ArrayList <String> (value); 
+        }
+.       elsif type = "dictionary"
+        //  --------------------------------------------------------------------------
+        //  Get/set a value in the $(name) dictionary
+
+        public Map <String, String> get$(Name) ()
+        {
+            return $(name);
+        }
+
+        public String get$(name:pascal)String (String key, String defaultValue)
+        {
+            String value = null;
+            if ($(name) != null)
+                value = $(name).get (key);
+            if (value == null)
+                value = defaultValue;
+
+            return value;
+        }
+
+        public long get$(name:pascal)Number (String key, long defaultValue)
+        {
+            long value = defaultValue;
+            String string = null;
+            if ($(name) != null)
+                string = $(name).get (key);
+            if (string != null)
+                value = Long.valueOf (string);
+
+            return value;
+        }
+
+        public void insert$(name:pascal) (String key, String format, Object ... args)
+        {
+            //  Format string into buffer
+            String string = String.format (format, args);
+
+            //  Store string in hash table
+            if ($(name) == null)
+                $(name) = new HashMap <String, String> ();
+            $(name).put (key, string);
+        }
+
+        public void set$(name:pascal) (Map <String, String> value)
+        {
+            $(name) = new HashMap <String, String> (value); 
+        }
+
+        public void setUnversioned$(name:pascal) (Map <String, VersionedValue> value)
+        {
+            $(name) = new HashMap <String, String> ();
+            for (Map.Entry <String, VersionedValue> entry : value.entrySet ()) {
+                $(name).put (entry.getKey (), entry.getValue ().getValue ());
+            }
+        }
+.       elsif type = "vdictionary"
+        //  --------------------------------------------------------------------------
+        //  Get/set a versioned value in the $(name) dictionary
+
+        public VersionedMap get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public String get$(name:pascal)String (String key, String defaultValue)
+        {
+            VersionedValue vvalue = null;
+            String value = defaultValue;
+            if ($(name) != null)
+                vvalue = $(name).get (key);
+            if (vvalue != null)
+                value = vvalue.getValue ();
+
+            return value;
+        }
+
+        public long get$(name:pascal)Number (String key, long defaultValue)
+        {
+            long value = defaultValue;
+            VersionedValue vvalue = null;
+            if ($(name) != null)
+                vvalue = $(name).get (key);
+            if (vvalue != null)
+                value = Long.valueOf (vvalue.getValue ());
+
+            return value;
+        }
+
+        public void insert$(name:pascal) (String key, int version, String format, Object ... args)
+        {
+            //  Format string into buffer
+            String string = String.format (format, args);
+
+            //  Store string in hash table
+            if ($(name) == null)
+                $(name) = new VersionedMap ();
+            $(name).put (key, version, string);
+        }
+
+        public void set$(name:pascal) (VersionedMap value)
+        {
+            if ($(name) == null)
+                $(name) = new VersionedMap ();
+            else
+                $(name) = new VersionedMap (value); 
+        }
+.       elsif type = "address"
+        //  --------------------------------------------------------------------------
+        //  Get/set a address value in the $(name) and $(name)Port
+
+        public InetAddress get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public String get$(name:pascal)String ()
+        {
+            return $(name).getHostAddress () + ":" + $(name)Port;
+        }
+
+        public int get$(name:pascal)Port ()
+        {
+            return $(name)Port;
+        }
+
+        public void set$(name:pascal) (InetAddress value)
+        {
+            $(name) = value; 
+        }
+
+        public void set$(name:pascal)Port (int value)
+        {
+            $(name)Port = value; 
+        }
+
+        public void set$(name:pascal) (String value)
+        {
+            String [] hp = value.split (":");
+            try {
+                $(name) = InetAddress.getByName (hp [0]); 
+            } catch (UnknownHostException e) {
+                throw new IllegalArgumentException ();
+            }
+            $(name)Port = Integer.valueOf (hp [1]); 
+        }
+.       elsif type = "messages"
+        //  --------------------------------------------------------------------------
+        //  Iterate through the $(name) field, and append a $(name) value
+
+        public List <$(kind:pascal)> get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        public void append$(name:pascal) ($(kind:pascal) value)
+        {
+            if ($(name) == null)
+                $(name) = new ArrayList <$(kind:pascal)> ();
+            $(name).add (value);
+        }
+
+        public void set$(name:pascal) (Collection <$(kind:pascal)> value)
+        {
+            $(name) = new ArrayList <$(kind:pascal)> (value); 
+        }
+.       elsif type = "frame"
+        //  --------------------------------------------------------------------------
+        //  Get/set the $(name) field
+
+        public ZFrame get$(name:pascal) ()
+        {
+            return $(name);
+        }
+
+        //  Takes ownership of supplied frame
+        public void set$(name:pascal) (ZFrame frame)
+        {
+            if ($(name) != null)
+                $(name).destroy ();
+            $(name) = frame;
+        }
+.       endif
+.   endfor
+.   for field
+.       if type = "dictionary"
+        //  Count size of key=value pair
+        private static int 
+        $(name)Count (final Map.Entry <String, String> entry)
+        {
+            return 1 + entry.getKey ().length () + 1 + entry.getValue ().length ();
+        }
+
+        //  Serialize $(name) key=value pair
+        private static void
+        $(name)Write (final Map.Entry <String, String> entry, $(message.name:pascal) self)
+        {
+            String string = entry.getKey () + "=" + entry.getValue ();
+            self.putString (string);
+        }
+.       elsif type = "vdictionary"
+        //  Count size of key=value pair
+        private static int 
+        $(name)Count (final Map.Entry <String, VersionedValue> entry)
+        {
+            return entry.getKey ().length () + 1 + 4 + entry.getValue ().getValue ().length () + 1;
+        }
+
+        //  Serialize $(name) key=value pair
+        private static void
+        $(name)Write (final Map.Entry <String, VersionedValue> entry, $(message.name:pascal) self)
+        {
+            self.putString (entry.getKey ());
+            self.putNumber4 (entry.getValue ().getVersion ());
+            self.putString (entry.getValue ().getValue ());
+        }
+.       endif
+.   endfor
+
+        private static $(message.name:pascal) build (JiniMsg parent, Socket input)
+        {
+            $(message.name:pascal) self = new $(message.name:pascal) (parent);
+
+.   for field
+.       if type = "number"
+            self.$(name) = self.getNumber$(size) ();
+.           if defined (field.value)
+            if (self.$(name) != $(field.value:))
+                throw new IllegalArgumentException ();
+.           endif
+.       elsif type = "octets"
+            self.$(name) = self.getBlock ($(size));
+.           if defined (field.value)
+            if (self.$(name) != $(field.value:))
+                throw new IllegalArgumentException (); 
+.           endif
+.       elsif type = "string"
+            self.$(name) = self.getString ();
+.           if defined (field.value)
+            if (!self.$(name).equals( "$(field.value:)"))
+                throw new IllegalArgumentException ();
+.           endif
+.       elsif type = "strings"
+            int $(name)Size = self.getNumber1 ();
+            self.$(name) = new ArrayList<String> ();
+            while ($(name)Size-- > 0) {
+                String string = self.getString ();
+                self.$(name).add (string);
+            }
+.       elsif type = "dictionary"
+            int $(name)Size = self.getNumber1 ();
+            self.$(name) = new HashMap <String, String> ();
+            while ($(name)Size-- > 0) {
+                String string = self.getString ();
+                String [] kv = string.split("=");
+                self.$(name).put(kv[0], kv[1]);
+            }
+.       elsif type = "vdictionary"
+            int $(name)Size = self.getNumber1 ();
+            self.$(name) = new VersionedMap ();
+            while ($(name)Size-- > 0) {
+                String k = self.getString ();
+                int ver = self.getNumber4 ();
+                String v = self.getString ();
+                self.$(name).put (k, ver, v);
+            }
+.       elsif type = "address"
+            byte [] addr_ = self.getBlock (4);
+            try {
+                self.$(name) = InetAddress.getByAddress (addr_);
+            } catch (UnknownHostException e) {
+                throw new IllegalArgumentException ();
+            }
+            self.$(name)Port = self.unsigned (self.getNumber2 ());
+.       elsif type = "messages"
+            int $(name)Size = self.getNumber1 ();
+            self.$(name) = new ArrayList<$(kind:pascal)> ();
+            while ($(name)Size-- > 0) {
+                $(kind:pascal) $(name)Item = $(kind:pascal).build (parent, input);
+                self.$(name).add ($(name)Item);
+            }
+.       elsif type = "frame"
+            //  Get next frame, leave current untouched
+            if (!input.hasReceiveMore ())
+                throw new IllegalArgumentException ();
+            self.$(name) = ZFrame.recvFrame (input);
+.       endif
+.    endfor
+            
+            return self;
+        }
+
+        //  --------------------------------------------------------------------------
+        //  Get frame size 
+
+        @Override
+        protected int getFrameSize ()
+        {
+            //  Calculate size of serialized data
+            int frameSize = 0;
+.   for field
+.       if type = "number"
+            //  $(name) is a $(size)-byte integer
+            frameSize += $(size);
+.       elsif type = "octets"
+            //  $(name) is a block of $(size) bytes
+            frameSize += $(size);
+.       elsif type = "string"
+            //  $(name) is a string with 1-byte length
+.           if defined (field.value)
+            frameSize += 1 + "$(field.value:)".length ();
+.           else
+            frameSize++;       //  Size is one octet
+            if ($(name) != null)
+                frameSize += $(name).length ();
+.           endif
+.       elsif type = "strings"
+            //  $(name) is an array of strings
+            frameSize++;       //  Size is one octet
+            if ($(name) != null) {
+                for (String value : $(name)) 
+                    frameSize += 1 + value.length ();
+            }
+.       elsif type = "dictionary"
+            //  $(name) is an array of key=value strings
+            frameSize++;       //  Size is one octet
+            if ($(name) != null) {
+                int $(name)Bytes = 0;
+                for (Map.Entry <String, String> entry: $(name).entrySet ()) {
+                    $(name)Bytes += $(name)Count (entry);
+                }
+                frameSize += $(name)Bytes;
+            }
+.       elsif type = "vdictionary"
+            //  $(name) is an array of key=VersionedValue 
+            frameSize++;       //  Size is one octet
+            if ($(name) != null) {
+                int $(name)Bytes = 0;
+                for (Map.Entry <String, VersionedValue> entry: $(name).entrySet ()) {
+                    $(name)Bytes += $(name)Count (entry);
+                }
+                frameSize += $(name)Bytes;
+            }
+.       elsif type = "address"
+            frameSize += 6;       //  Size is 6 octets
+.       elsif type = "messages"
+            //  $(name) is an array of reference
+            frameSize++;       //  Size is one octet
+            if ($(name) != null) {
+                for ($(kind:pascal) value : $(name)) 
+                    frameSize += value.getFrameSize ();
+            }
+.       endif
+.   endfor
+            return frameSize;
+        }
+
+        //  --------------------------------------------------------------------------
+        //  Serialize
+
+        @Override
+        protected ZMsg serialize ()
+        {
+            ZMsg msg = null;
+            //  Now serialize message into the frame
+.   for field
+.       if type = "number"
+.           if defined (field.value)
+            putNumber$(size) ($(field.value:));
+.           else
+            putNumber$(size) ($(name));
+.           endif
+.       elsif type = "octets"
+            putBlock ($(name), $(size));
+.       elsif type = "string"
+.           if defined (field.value)
+            putString ("$(field.value:)");
+.           else
+            if ($(name) != null)
+                putString ($(name));
+            else
+                putNumber1 ((byte) 0);      //  Empty string
+.           endif
+.       elsif type = "strings"
+            if ($(name) != null) {
+                putNumber1 ((byte) $(name).size ());
+                for (String value : $(name)) {
+                    putString (value);
+                }
+            }
+            else
+                putNumber1 ((byte) 0);      //  Empty string array
+.       elsif type = "dictionary"
+            if ($(name) != null) {
+                putNumber1 ((byte) $(name).size ());
+                for (Map.Entry <String, String> entry: $(name).entrySet ()) {
+                    $(name)Write (entry, this);
+                }
+            }
+            else
+                putNumber1 ((byte) 0);      //  Empty dictionary
+.       elsif type = "vdictionary"
+            if ($(name) != null) {
+                putNumber1 ((byte) $(name).size ());
+                for (Map.Entry <String, VersionedValue> entry: $(name).entrySet ()) {
+                    $(name)Write (entry, this);
+                }
+            }
+            else
+                putNumber1 ((byte) 0);      //  Empty dictionary
+.       elsif type = "address"
+            if ($(name) != null) {
+                putBlock ($(name).getAddress (), 4);
+                putNumber2 ($(name)Port);
+            }
+            else
+                putBlock (new byte [] {0,0,0,0,0,0}, 6);
+.       elsif type = "messages"
+            if ($(name) != null) {
+                putNumber1 ((byte) $(name).size ());
+                for ($(kind:pascal) value : $(name)) {
+                    value.setNeedle (getNeedle ());
+                    value.serialize ();
+                }
+            }
+            else
+                putNumber1 ((byte) 0);      //  Empty reference array
+.       elsif type = "frame"
+            msg = new ZMsg ();
+.       endif
+.   endfor
+        
+.   for field where type = "frame"
+            //  Now send any frame fields, in order
+            //  If $(name) isn't set, send an empty frame
+            if ($(field.name) == null)
+                $(field.name) = new ZFrame ("");
+            msg.add ($(field.name));
+.   endfor
+            return msg;
+        }
+
+        //  --------------------------------------------------------------------------
+        //  Duplicate the $(class.name:pascal) message
+
+        public $(message.name:pascal) dup ($(message.name:pascal) self)
+        {
+            if (self == null)
+                return null;
+
+            $(message.name:pascal) copy = new $(message.name:pascal) ();
+            if (self.getIdentity () != null)
+                copy.setAddress (self.getIdentity ());
+.   for field
+.       if type = "number"
+            copy.$(name) = self.$(name);
+.       elsif type = "octets"
+            System.arraycopy (copy.$(name), 0, self.$(name), 0, $(size));
+.       elsif type = "string"
+            copy.$(name) = self.$(name);
+.       elsif type = "strings"
+            copy.$(name) = new ArrayList <String> (self.$(name));
+.       elsif type = "dictionary"
+            copy.$(name) = new HashMap <String, String> (self.$(name));
+.       elsif type = "vdictionary"
+            copy.$(name) = new VersionedMap (self.$(name));
+.       elsif type = "address"
+            copy.$(name) = self.$(name);
+            copy.$(name)Port = self.$(name)Port;
+.       elsif type = "messages"
+            copy.$(name) = new ArrayList <$(kind:pascal)> (self.$(name));
+.       elsif type = "frame"
+            copy.$(name) = self.$(name).duplicate ();
+.       endif
+.   endfor
+            return copy;
+        }
+
+.   for field where type = "dictionary"
+        //  Dump $(name) key=value pair to stdout
+        public static void $(name)Dump (Map.Entry <String, String> entry, $(message.name:pascal) self)
+        {
+            System.out.printf ("        %s=%s\\n", entry.getKey (), entry.getValue ());
+        }
+
+.   endfor
+.   for field where type = "vdictionary"
+        //  Dump $(name) key=value pair to stdout
+        public static void $(name)Dump (StringBuilder b, String tab, 
+                                        Map.Entry <String, VersionedValue> entry, $(message.name:pascal) self)
+        {
+            b.append (String.format ("%s    %s=[%d]%s\\n", tab, entry.getKey (), entry.getValue ().getVersion (), entry.getValue ().getValue ()));
+        }
+
+.   endfor
+
+
+        //  --------------------------------------------------------------------------
+        //  Print contents of message to stdout
+
+        public void dump ()
+        {
+            StringBuilder b = new StringBuilder ();
+            dump (b, 0);
+            System.out.print (b);
+        }
+        public String dumps ()
+        {
+            StringBuilder b = new StringBuilder ();
+            dump (b, 0);
+            return b.toString ();
+        }
+
+        private void dump (StringBuilder b, int depth)
+        {
+            String tab0 = "";
+            String tab = "";
+            for (int i = 0; i < depth; i++ )
+                tab0 += "    ";
+            tab = tab0 + "    ";
+
+            b.append (String.format ("%s$(MESSAGE.NAME):\\n", tab0));
+
+.   for field
+.       if type = "number"
+.           if defined (field.value)
+            b.append (String.format ("%s$(name)=$(field.value)\\n", tab));
+.           else
+            b.append (String.format ("%s$(name)=%d\\n", tab, (long)$(name)));
+.           endif
+.       elsif type = "octets"
+            System.out.printf ("    $(name)=");
+            int $(name)Index;
+            for ($(name)Index = 0; $(name)Index < $(size); $(name)Index++) {
+                if ($(name)Index != 0 && ($(name)Index % 4 == 0))
+                    System.out.printf ("-");
+                System.out.printf ("%02X", $(name) [$(name)Index]);
+            }
+            System.out.printf ("\\n");
+.       elsif type = "string"
+.           if defined (field.value)
+            System.out.printf ("    $(name)=$(field.value)\\n");
+.           else
+            if ($(name) != null)
+                System.out.printf ("    $(name)='%s'\\n", $(name));
+            else
+                System.out.printf ("    $(name)=\\n");
+.           endif
+.       elsif type = "strings"
+            System.out.printf ("    $(name)={");
+            if ($(name) != null) {
+                for (String value : $(name)) {
+                    System.out.printf (" '%s'", value);
+                }
+            }
+            System.out.printf (" }\\n");
+.       elsif type = "dictionary"
+            System.out.printf ("    $(name)={\\n");
+            if ($(name) != null) {
+                for (Map.Entry <String, String> entry : $(name).entrySet ())
+                    $(name)Dump (entry, this);
+            }
+            System.out.printf ("    }\\n");
+.       elsif type = "vdictionary"
+            b.append (String.format ("%s$(name)={\\n", tab));
+            if ($(name) != null) {
+                for (Map.Entry <String, VersionedValue> entry : $(name).entrySet ())
+                    $(name)Dump (b, tab, entry, this);
+            }
+            b.append (String.format ("%s}\\n", tab));
+.       elsif type = "address"
+            b.append (String.format ("%s$(name)=%s\\n", tab, get$(name:pascal)String ()));
+.       elsif type = "messages"
+            b.append (String.format ("%s$(name)={\\n", tab));
+            if ($(name) != null) {
+                for ($(kind:pascal) value : $(name)) {
+                    value.dump (b, depth + 1);
+                }
+            }
+            b.append (String.format ("%s}\\n", tab));
+.       elsif type = "frame"
+            System.out.printf ("    $(name)={\\n");
+            if ($(name) != null) {
+                int size = $(name).size ();
+                byte [] data = $(name).getData ();
+                System.out.printf ("        size=%d\\n", $(name).size ());
+                if (size > 32)
+                    size = 32;
+                int $(name)Index;
+                for ($(name)Index = 0; $(name)Index < size; $(name)Index++) {
+                    if ($(name)Index != 0 && ($(name)Index % 4 == 0))
+                        System.out.printf ("-");
+                    System.out.printf ("%02X", data [$(name)Index]);
+                }
+            }
+            System.out.printf ("    }\\n");
+.       endif
+.   endfor
+        }
+    }
+    
+.endfor
+
+    //  --------------------------------------------------------------------------
+    //  Receive and parse a $(class.name:pascal) from the socket. Returns new object or
+    //  null if error. Will block if there's no message waiting.
+
+    public static class $(class.name:pascal)Builder 
+                              implements JiniMsg.Builder
+    {
+        @Override
+        public JiniMsg build (JiniMsg parent, Socket input)
+        {
+            assert (parent != null);
+
+            JiniMsg self = null;
+            switch (parent.getId ()) {
+.for class.message
+            case $(MESSAGE.NAME):
+                self = $(message.name:pascal).build (parent, input);
+                break;
+
+.endfor
+            default:
+                throw new IllegalArgumentException ();
+            }
+
+            return self;
+        }
+    }
+
+}
+
+.echo "Generating ../src/test/java/$(string.replace (class.package, '.|/'))/Test$(class.name:pascal).java..."
+.output "../src/test/java/$(string.replace (class.package, '.|/'))/Test$(class.name:pascal).java"
+//  --------------------------------------------------------------------------
+//  Selftest
+
+package $(class.package);
+
+import static org.junit.Assert.*;
+import org.junit.Test;
+import org.jeromq.ZMQ;
+import org.jeromq.ZMQ.Socket;
+import org.jeromq.ZFrame;
+import org.jeromq.ZContext;
+import org.jeromq.jini.JiniMsg;
+
+public class Test$(class.name:pascal)
+{
+    @Test
+    public void test$(class.name:pascal) ()
+    {
+        System.out.printf (" * $(class.name): ");
+
+        //  Create pair of sockets we can send through
+        ZContext ctx = new ZContext ();
+        assertNotNull (ctx);
+
+        Socket output = ctx.createSocket (ZMQ.DEALER);
+        assertNotNull (output);
+        output.bind ("inproc://selftest");
+        Socket input = ctx.createSocket (ZMQ.ROUTER);
+        assertNotNull (input);
+        input.connect ("inproc://selftest");
+        
+        //  Encode/send/decode and verify each message type
+.for class.message
+
+        $(class.name:pascal).$(message.name:pascal) $(message.name:camel) = new $(class.name:pascal).$(message.name:pascal) ();
+.   for field where !defined (value)
+.       if type = "number"
+        $(message.name:camel).set$(name:pascal) ((byte) 123);
+.       elsif type = "octets"
+        byte [] $(name)Data = new byte [$(class.name:pascal).$(FIELD.NAME)_SIZE];
+        for (int i=0; i < $(class.name:pascal).$(FIELD.NAME)_SIZE; i++)
+            $(name)Data [i] = 123;
+        $(message.name:camel).set$(name:pascal) ($(name)Data);
+.       elsif type = "string"
+        $(message.name:camel).set$(name:pascal) ("Life is short but Now lasts for ever");
+.       elsif type = "strings"
+        $(message.name:camel).append$(name:pascal) ("Name: %s", "Brutus");
+        $(message.name:camel).append$(name:pascal) ("Age: %d", 43);
+.       elsif type = "dictionary"
+        $(message.name:camel).insert$(name:pascal) ("Name", "Brutus");
+        $(message.name:camel).insert$(name:pascal) ("Age", "%d", 43);
+.       elsif type = "vdictionary"
+        $(message.name:camel).insert$(name:pascal) ("Name", 200, "Brutus");
+        $(message.name:camel).insert$(name:pascal) ("Age", 100, "%d", 43);
+.       elsif type = "frame"
+        $(message.name:camel).set$(name:pascal) (new ZFrame ("Captcha Diem"));
+.       endif
+.   endfor
+        $(message.name:camel).send (output);
+    
+        $(message.name:camel) = ($(class.name:pascal).$(message.name:pascal)) JiniMsg.recv (input);
+        assertNotNull ($(message.name:camel));
+.   for field where !defined (value)
+.       if type = "number"
+        assertEquals ($(message.name:camel).get$(name:pascal) (), 123);
+.       elsif type = "octets"
+        assertEquals ($(message.name:camel).get$(name:pascal) () [0], 123);
+        assertEquals ($(message.name:camel).get$(name:pascal) () [$(class.name:pascal).$(FIELD.NAME)_SIZE - 1], 123);
+.       elsif type = "string"
+        assertEquals ($(message.name:camel).get$(name:pascal) (), "Life is short but Now lasts for ever");
+.       elsif type = "strings"
+        assertEquals ($(message.name:camel).get$(name:pascal) ().size (), 2);
+        assertEquals ($(message.name:camel).get$(name:pascal) ().get (0), "Name: Brutus");
+        assertEquals ($(message.name:camel).get$(name:pascal) ().get (1), "Age: 43");
+.       elsif type = "dictionary"
+        assertEquals ($(message.name:camel).get$(name:pascal) ().size (), 2);
+        assertEquals ($(message.name:camel).get$(name:pascal)String ("Name", "?"), "Brutus");
+        assertEquals ($(message.name:camel).get$(name:pascal)Number ("Age", 0), 43);
+.       elsif type = "vdictionary"
+        assertEquals ($(message.name:camel).get$(name:pascal) ().size (), 2);
+        assertEquals ($(message.name:camel).get$(name:pascal) ().get ("Name").getVersion (), 200);
+        assertEquals ($(message.name:camel).get$(name:pascal) ().get ("Age").getVersion (), 100);
+        assertEquals ($(message.name:camel).get$(name:pascal)String ("Name", "?"), "Brutus");
+        assertEquals ($(message.name:camel).get$(name:pascal)Number ("Age", 0), 43);
+.       elsif type = "frame"
+        assertTrue ($(message.name:camel).get$(name:pascal) ().streq ("Captcha Diem"));
+.       endif
+.   endfor
+        $(message.name:camel).destroy ();
+.endfor
+
+        ctx.destroy ();
+        System.out.printf ("OK\\n");
+    }
+}
