@@ -1,17 +1,23 @@
-#Jini
+#Zyni
 
-jini - Message based application framework on JeroMQ
+zyni - Message based application framework on ZeroMQ
 
 
 ## Features
 * Automatic discovery and State sharing
+ * Pluggable discovery system
  * Gossip based discovery
- * Fixed set discovery
 * Peer-to-Peer massively parallel processing
- * A topology based processing
+ * A topology based (DAG) processing
  * Utilize a load statics
- * Guaranting processing with an Ack
+ * Guaranting processing with an Acker
  * Streaming processing with a cursor
+
+## Planned Features
+* Centralized logging
+* Consistence hasing
+* File sharing
+* Replica processing
 
 ## Contribution Process
 
@@ -25,9 +31,9 @@ Add it to your Maven project's `pom.xml`:
 
     <!-- for the latest SNAPSHOT -->
     <dependency>
-      <groupId>org.jeromq</groupId>
-      <artifactId>jini</artifactId>
+      <groupId>org.zyni</groupId>
+      <artifactId>zyni</artifactId>
       <version>0.1.0-SNAPSHOT</version>
     </dependency>
 
-Also please refer the [Wiki](https://github.com/infiniloop/jini/wiki)
+Also please refer the [Wiki](https://github.com/infiniloop/zyni/wiki)
